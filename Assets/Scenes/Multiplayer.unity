@@ -834,7 +834,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 479827545}
-  - component: {fileID: 479827544}
   m_Layer: 0
   m_Name: GameController
   m_TagString: Untagged
@@ -842,43 +841,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &479827544
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 479827543}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 96b163651334d6e4091c84d45b1d69e1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  cellButtons:
-  - {fileID: 675287911}
-  - {fileID: 1488457047}
-  - {fileID: 1482764997}
-  - {fileID: 1880714314}
-  - {fileID: 935604697}
-  - {fileID: 567669070}
-  - {fileID: 813249376}
-  - {fileID: 2143214542}
-  - {fileID: 398911005}
-  cellLabels:
-  - {fileID: 2036777378}
-  - {fileID: 1677215312}
-  - {fileID: 1321072716}
-  - {fileID: 2127080782}
-  - {fileID: 1323178131}
-  - {fileID: 683421486}
-  - {fileID: 279968112}
-  - {fileID: 408950716}
-  - {fileID: 2086826904}
-  playerXWinsText: {fileID: 1450161875}
-  playerOWinsText: {fileID: 1602073461}
-  playerXStatusText: {fileID: 1905020427}
-  playerOStatusText: {fileID: 1327071585}
-  newGameButton: {fileID: 505254717}
 --- !u!4 &479827545
 Transform:
   m_ObjectHideFlags: 0
