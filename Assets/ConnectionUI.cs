@@ -1,17 +1,41 @@
+using TMPro;
+using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using UnityEngine.UI;
-using Unity.Netcode;
 
 public class ConnectionUI : MonoBehaviour
 {
-    // UI buttons
     [SerializeField] private Button hostButton;
     [SerializeField] private Button clientButton;
+    [SerializeField] private TMP_InputField addressInput; // blank = localhost
 
     private void Awake()
-    {   
-        //When host/client is clicked start as host/client (for host, server and local client, and for client connect to host)
-        hostButton.onClick.AddListener(() => NetworkManager.Singleton.StartHost());
-        clientButton.onClick.AddListener(() => NetworkManager.Singleton.StartClient());
+    {
+        hostButton.onClick.AddListener(StartHost);
+        clientButton.onClick.AddListener(StartClient);
+    }
+
+    private void StartHost()
+    {
+        SetAddressIfProvided(); // optional; host can leave blank
+        NetworkManager.Singleton.StartHost();
+    }
+
+    private void StartClient()
+    {
+        SetAddressIfProvided(); // client should enter host LAN IP
+        NetworkManager.Singleton.StartClient();
+    }
+
+    private void SetAddressIfProvided()
+    {
+        if (addressInput == null) return;
+
+        string addr = addressInput.text.Trim();
+        if (string.IsNullOrEmpty(addr)) addr = "127.0.0.1";
+
+        var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+        transport.ConnectionData.Address = addr; // port stays 7777 unless you changed it
     }
 }
