@@ -21,24 +21,30 @@ public class TicTacToeNetUI : MonoBehaviour
 
     private void Awake()
     {
+        // Hook up all 9 board buttons
+        // capture idx, else every button can end up sending the same index
         for (int i = 0; i < 9; i++)
         {
             int idx = i;
             cellButtons[i].onClick.AddListener(() => OnCellClicked(idx));
         }
 
+        // New Game button sends reset request to server
         if (newGameButton != null)
             newGameButton.onClick.AddListener(OnNewGameClicked);
     }
 
     private IEnumerator Start()
     {
+        // Server spawns TicTacToeNetGame at runtime.
+        // so we wait until it exists before connecting UI updates
         while (game == null)
         {
             game = FindFirstObjectByType<TicTacToeNetGame>();
             yield return null;
         }
 
+        // connect to changes so UI refreshes whenever networked values change
         game.Board.OnListChanged += _ => Refresh();
         game.PlayerOID.OnValueChanged += (_, __) => Refresh();
         game.CurrentPlayerMark.OnValueChanged += (_, __) => Refresh();
@@ -47,7 +53,7 @@ public class TicTacToeNetUI : MonoBehaviour
         game.GameState.OnValueChanged += (_, __) => Refresh();
         game.WinnerMark.OnValueChanged += (_, __) => Refresh();
 
-        Refresh();
+        Refresh();  // initial UI draw
     }
 
     private void OnCellClicked(int index)
@@ -98,13 +104,22 @@ public class TicTacToeNetUI : MonoBehaviour
 
         // Board + interactable (only your turn, only if both players connected)
         ulong me = NetworkManager.Singleton.LocalClientId;
+        // Determine if I'm X, O, or neither
         int myMark = (me == game.PlayerXID.Value) ? 1 : (me == game.PlayerOID.Value) ? 2 : 0;
 
         for (int i = 0; i < 9; i++)
         {
             int v = (game.Board.Count == 9) ? game.Board[i] : 0;
+
+            // Show X/O/blank from the networked board
             cellLabels[i].text = (v == 1) ? "X" : (v == 2) ? "O" : "";
 
+            // Only allow clicking when:
+            // - both players are connected
+            // - game is actively playing
+            // - I'm X or O (not spectator)
+            // - it's my turn
+            // - the cell is empty
             bool canClick =
                 bothPlayers &&
                 game.GameState.Value == 0 &&

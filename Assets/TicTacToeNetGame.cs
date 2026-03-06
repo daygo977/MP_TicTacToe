@@ -3,56 +3,67 @@ using Unity.Netcode;
 
 public class TicTacToeNetGame : NetworkBehaviour
 {
-    // 0 empty, 1 is X, 2 is O
+    // NetworkList is synced list (server writes, clients automatically receive updates)
+    // Used for the 9 board buttons: 0 empty, 1 X, 2 O
     public NetworkList<int> Board = new NetworkList<int>();
 
+    // Store which clientId is playing X and which is playing O
+    // ulong.MaxValue = "not assigned yet"
     public NetworkVariable<ulong> PlayerXID = new NetworkVariable<ulong>(ulong.MaxValue);
     public NetworkVariable<ulong> PlayerOID = new NetworkVariable<ulong>(ulong.MaxValue);
 
+    // Shared turn and scores (everyone sees the same values)
     public NetworkVariable<int> CurrentPlayerMark = new NetworkVariable<int>(1);
     public NetworkVariable<int> XWins = new NetworkVariable<int>(0);
     public NetworkVariable<int> OWins = new NetworkVariable<int>(0);
 
-    // 0 is playing, 1 is win, 2 is draw
+    // Shared game state: 0 is playing, 1 is win, 2 is draw
     public NetworkVariable<int> GameState = new NetworkVariable<int>(0);
     public NetworkVariable<int> WinnerMark = new NetworkVariable<int>(0);
 
     public override void OnNetworkSpawn()
     {
+        // Only server should set official game state.
+        // Clients receive changes automatically through NetworkVars/NetworkList.
         if (!IsServer) return;
     
         // Host/server becomes X
         PlayerXID.Value = NetworkManager.ServerClientId;
 
         // Initialize board/grid once
+        // If we don't do this, Board[index] can error or be missing on clients
         if (Board.Count != 9)
         {
             Board.Clear();
             for (int i = 0; i < 9; i++) Board.Add(0);
         }
 
+        // Listen for clients joining so we can assign Player O
+        // If both players are already present, randomize who starts
         NetworkManager.OnClientConnectedCallback += OnClientConnected;
         PickRandomStarterIfReady();
     }
 
     public override void OnNetworkDespawn()
     {
+        // Disconnect when NetworkObject is destroyed (prevents event leaks)
         if (IsServer && NetworkManager != null)
             NetworkManager.OnClientConnectedCallback -= OnClientConnected;
     }
 
     private void OnClientConnected(ulong clientID)
     {
-        // FIrst non-host client becomes O
+        // First non-host client becomes O
         if (clientID != PlayerXID.Value && PlayerOID.Value == ulong.MaxValue)
             PlayerOID.Value = clientID;
         
+        // If both players now exist, decide who starts
         PickRandomStarterIfReady();
     }
 
     private void PickRandomStarterIfReady()
     {
-        // Only randomize once both players exist
+        // We randomize the starter if both players connected.
         if (PlayerXID.Value == ulong.MaxValue || PlayerOID.Value == ulong.MaxValue) return;
         CurrentPlayerMark.Value = Random.Range(1, 3); // 1 or 2
     }
@@ -60,18 +71,22 @@ public class TicTacToeNetGame : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void RequestMoveServerRpc(int index, ServerRpcParams rpcParams = default)
     {
+        // Reject moves if round already ended
+        // Reject invalid indices
+        // Reject moves on an already-filled button
         if (GameState.Value != 0) return;
         if (index < 0 || index >= 9) return;
         if (Board[index] != 0) return;
 
+        // The client who sent this RPC (who clicked)
         ulong sender = rpcParams.Receive.SenderClientId;
 
-        // Sender must be the correct player for current turn
+        // Sender must be the correct player for current turn (X=1 / O=2 / no one=0)
         int senderMark = GetMarkForClient(sender);
         if (senderMark == 0) return;    // not X or O
         if (senderMark != CurrentPlayerMark.Value) return;
 
-        // Apply move
+        // Apply move, server writes the board
         Board[index] = senderMark;
 
         int winner = CheckWinner(); //check winner
@@ -90,14 +105,14 @@ public class TicTacToeNetGame : NetworkBehaviour
             return;
         }
 
-        // Switch turns
+        // Switch turns, if no win or draw
         CurrentPlayerMark.Value = (CurrentPlayerMark.Value == 1) ? 2 : 1;
     }
 
     [ServerRpc(RequireOwnership = false)]
     public void RequestResetServerRpc()
     {
-        // Keep scores, reset round
+        // Keep scores, server resets the board for everyone
         for (int i = 0; i < 9; i++) Board[i] = 0;
         WinnerMark.Value = 0;
         GameState.Value = 0;
@@ -108,8 +123,9 @@ public class TicTacToeNetGame : NetworkBehaviour
 
     private int GetMarkForClient(ulong clientID)
     {
-        if (clientID == PlayerXID.Value) return 1;
-        if (clientID == PlayerOID.Value) return 2;
+        // Map each connected client to their role/mark
+        if (clientID == PlayerXID.Value) return 1;  // X
+        if (clientID == PlayerOID.Value) return 2;  // O
         return 0;       
     }
     
